@@ -1,32 +1,36 @@
-#include "PS2Keyboard.h"
+#include "PS2KeyAdvanced.h"
 
-//#define SERIAL_DEBUG
+#define SERIAL_DEBUG
 
 #define NUMPAD  0x0100
 #define NUMPAD2 0x0200
 
-#define PS2_DATA_PIN 3
-#define PS2_CLOCK_PIN 2
+#define LED_PIN PC13
 
-#define MAC_DATA_PIN 5
-#define MAC_CLOCK_PIN 6
+#define PS2_DATA_PIN PB8
+#define PS2_CLOCK_PIN PB9
+
+#define MAC_DATA_PIN PB4
+#define MAC_CLOCK_PIN PB5
 
 #define NULL_TRANSITION 0x7b
 #define CAPS_LOCK       0x73
 
-PS2Keyboard keyboard;
+PS2KeyAdvanced keyboard;
 unsigned int scanCodesTable[256];
 unsigned int extScanCodesTable[256];
 
 void setup() {
 #ifdef SERIAL_DEBUG
   Serial.begin(9600);
+  Serial.println("Mac Plus to PS/2 Started!");
+  Serial.flush();
 #endif
   initScancodes();
 
   keyboard.begin(PS2_DATA_PIN, PS2_CLOCK_PIN);
 
-  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
   pinMode(MAC_CLOCK_PIN, OUTPUT);
   pinMode(MAC_DATA_PIN, INPUT_PULLUP);
   
@@ -41,7 +45,7 @@ void waitForInitSignal() {
     if (millis() - t > 100) {
       t = millis();
       led = !led;
-      digitalWrite(LED_BUILTIN, led);
+      digitalWrite(LED_PIN, led);
     }
   }
 }
@@ -68,16 +72,16 @@ void loop() {
 
 // reads the command, operates the diagnostic LED and switches pin mode back to OUTPUT
 byte readCmd() {
-  digitalWrite(LED_BUILTIN, LOW);
+  digitalWrite(LED_PIN, LOW);
   pinMode(MAC_DATA_PIN, INPUT_PULLUP);
   delayMicroseconds(20);
-  
+
   while (digitalRead(MAC_DATA_PIN) != LOW);
   delayMicroseconds(400); // this is apparently required so we don't lose the first digit
   byte cmd = readByte();
   while (digitalRead(MAC_DATA_PIN) != HIGH);
   
-  digitalWrite(LED_BUILTIN, HIGH);
+  digitalWrite(LED_PIN, HIGH);
   pinMode(MAC_DATA_PIN, OUTPUT);
   delayMicroseconds(20);
   return cmd;
@@ -121,6 +125,7 @@ byte readByte() {
 #ifdef SERIAL_DEBUG
   Serial.print(b, HEX);
   Serial.print(" -> ");
+  Serial.flush();
 #endif
   return b;
 }
@@ -129,6 +134,7 @@ void sendByte(byte b) {
 #ifdef SERIAL_DEBUG
   Serial.print(b, HEX);
   Serial.println();
+  Serial.flush();
 #endif
   for (byte m = 128; m > 0; m >>= 1) {
     digitalWrite(MAC_DATA_PIN, !(b & m) ? LOW : HIGH);
@@ -142,7 +148,9 @@ void sendByte(byte b) {
 }
 
 unsigned int getKeyTransition() {
-  byte c = keyboard.getScanCode();
+  byte c = keyboard.read();
+  Serial.write(c);
+  Serial.flush();
   if (c == 0) {
     return NULL_TRANSITION;
   } else if (c == 0xf0) {
@@ -192,7 +200,7 @@ unsigned int handleCapsLockRelease() {
 
 byte waitForScanCode() {
   while (true) {
-    byte s = keyboard.getScanCode();
+    byte s = keyboard.read();
     if (s) {
       return s;
     }
