@@ -3,7 +3,7 @@
 // Teensy and maybe others automatically define this info
 #if !defined(CORE_INT0_PIN)
 
-// Arduino Mega
+// Arduino Mega/Users/annemacedo/Downloads/mackbd/src/system_stm32f0xx.c
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega
   #define CORE_INT0_PIN  2
   #define CORE_INT1_PIN  3
@@ -55,10 +55,15 @@
 #elif defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__)
   #define CORE_INT0_PIN  2
 
+//STM32F1 support
+#elif defined(__STM32F1__)
+  #define CORE_INT_EVERY_PIN
+
 // Arduino Uno, Duemilanove, LilyPad, Mini, Fio, etc...
 #else
   #define CORE_INT0_PIN  2
   #define CORE_INT1_PIN  3
+  
 
 #endif
 #endif
